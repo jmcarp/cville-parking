@@ -8,8 +8,17 @@ provider "google" {
   project = var.project
 }
 
+provider "google-beta" {
+  region  = "us-central1"
+  project = var.project
+}
+
 variable "project" {
   default = "cville-parking"
+}
+
+variable "email_address" {
+  default = "jm.carp@gmail.com"
 }
 
 resource "google_bigquery_dataset" "parking" {
@@ -23,15 +32,18 @@ resource "google_bigquery_table" "public" {
 [
   {
     "name": "lot",
-    "type": "STRING"
+    "type": "STRING",
+    "mode": "NULLABLE"
   },
   {
     "name": "timestamp",
-    "type": "TIMESTAMP"
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
   },
   {
     "name": "spaces",
-    "type": "INT64"
+    "type": "INTEGER",
+    "mode": "NULLABLE"
   }
 ]
 EOF
@@ -97,5 +109,40 @@ resource "google_cloud_scheduler_job" "scrape" {
       dataset_id = google_bigquery_dataset.parking.dataset_id
       table_id   = google_bigquery_table.public.table_id
     }
+  }
+}
+
+resource "google_monitoring_alert_policy" "scrape" {
+  provider              = google-beta
+  display_name          = "scrape"
+  combiner              = "OR"
+  notification_channels = [google_monitoring_notification_channel.email.name]
+
+  conditions {
+    display_name = "executions"
+
+    condition_threshold {
+      comparison      = "COMPARISON_LT"
+      duration        = "600s"
+      filter          = "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\" resource.type=\"cloud_function\" resource.label.\"function_name\"=\"scrape\" metric.label.\"status\"=\"ok\""
+      threshold_value = 1
+
+      aggregations {
+        alignment_period   = "300s"
+        per_series_aligner = "ALIGN_COUNT"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+}
+
+resource "google_monitoring_notification_channel" "email" {
+  display_name = "email"
+  type         = "email"
+  labels = {
+    email_address = var.email_address
   }
 }
