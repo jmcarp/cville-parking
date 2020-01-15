@@ -23,6 +23,30 @@ variable "email_address" {
 
 resource "google_bigquery_dataset" "parking" {
   dataset_id = "parking"
+
+  // Default access
+  access {
+    role          = "OWNER"
+    user_by_email = var.email_address
+  }
+  access {
+    role          = "OWNER"
+    special_group = "projectOwners"
+  }
+  access {
+    role          = "READER"
+    special_group = "projectReaders"
+  }
+  access {
+    role          = "WRITER"
+    special_group = "projectWriters"
+  }
+
+  // Public read-only access
+  access {
+    role          = "READER"
+    special_group = "allAuthenticatedUsers"
+  }
 }
 
 resource "google_bigquery_table" "public" {
