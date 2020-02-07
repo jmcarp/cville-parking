@@ -17,6 +17,14 @@ variable "project" {
   default = "cville-parking"
 }
 
+variable "lot_capacities" {
+  type = map(number)
+  default = {
+    market = 480
+    water  = 900
+  }
+}
+
 variable "email_address" {
   default = "jm.carp@gmail.com"
 }
@@ -154,6 +162,35 @@ resource "google_monitoring_alert_policy" "scrape" {
       aggregations {
         alignment_period   = "300s"
         per_series_aligner = "ALIGN_COUNT"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+}
+
+resource "google_monitoring_alert_policy" "scrape_high" {
+  for_each = var.lot_capacities
+  provider = google-beta
+
+  display_name          = "scrape-${each.key}-high"
+  combiner              = "OR"
+  notification_channels = [google_monitoring_notification_channel.email.name]
+
+  conditions {
+    display_name = "spaces over capacity for ${each.key}"
+
+    condition_threshold {
+      comparison      = "COMPARISON_GT"
+      duration        = "300s"
+      filter          = "metric.type=\"custom.googleapis.com/spaces\" resource.type=\"global\" metric.label.\"lot\"=\"${each.key}\""
+      threshold_value = each.value
+
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_MEAN"
       }
 
       trigger {
