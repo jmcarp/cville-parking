@@ -1,5 +1,17 @@
 terraform {
   backend "gcs" {
+    bucket = "cville-parking-terraform-state"
+  }
+  required_version = "~> 1.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 4.1"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 4.1"
+    }
   }
 }
 
@@ -97,8 +109,9 @@ data "archive_file" "scrape" {
 }
 
 resource "google_storage_bucket" "functions" {
-  project = var.project
-  name    = "cville-parking-functions"
+  project  = var.project
+  location = "US"
+  name     = "cville-parking-functions"
 }
 
 resource "google_storage_bucket_object" "scrape" {
@@ -115,7 +128,7 @@ resource "google_pubsub_topic" "scrape" {
 resource "google_cloudfunctions_function" "scrape" {
   project = var.project
   name    = "scrape"
-  runtime = "python37"
+  runtime = "python39"
 
   source_archive_bucket = google_storage_bucket.functions.name
   source_archive_object = google_storage_bucket_object.scrape.name
