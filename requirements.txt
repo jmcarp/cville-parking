@@ -1,4 +1,4 @@
-google-cloud-bigquery
-google-cloud-monitoring
-lxml
-requests
+google-cloud-bigquery~=2.31
+google-cloud-monitoring~=2.8
+lxml~=4.6
+requests~=2.26
